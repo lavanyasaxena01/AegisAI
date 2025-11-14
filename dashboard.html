@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- Auto-refresh every 2 seconds so charts/state update without JS -->
+<meta http-equiv="refresh" content="2">
+
+<div class="grid">
+  <section class="card span-8">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Live Network Traffic</div>
+        <div class="muted">packets/sec • synthetic</div>
+      </div>
+      <form action="{{ url_for('toggle_cloak') }}" method="post">
+        <button class="btn {{ 'btn-on' if state.cloak_on else 'btn-off' }}">Cloak: {{ 'ON' if state.cloak_on else 'OFF' }}</button>
+      </form>
+    </div>
+    <img class="chart" src="{{ url_for('chart_traffic') }}?t={{ state.now }}" alt="traffic">
+    <div class="stats">
+      <div class="stat">
+        <div class="muted">Predicted Risk</div>
+        <div class="big">{{ (state.prediction.risk * 100)|int }}%</div>
+        <div class="muted">Label: <strong>{{ state.prediction.label }}</strong></div>
+        {% if state.prediction.countdown is not none %}
+          <div class="warn">Auto-action in: <strong>{{ state.prediction.countdown }}s</strong></div>
+        {% endif %}
+      </div>
+      <div class="stat">
+        <div class="muted">Auto Immunity</div>
+        <div>Rate-limit + IP block</div>
+        <div class="muted">Last action: {{ state.blocked[0].time if state.blocked else '—' }}</div>
+      </div>
+      <div class="stat">
+        <div class="muted">Cloak Strength</div>
+        <div class="big">{{ 'Good' if state.cloak_on else 'Off' }}</div>
+        <div class="muted">Attacker classifier score: {{ state.cloak_score }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card span-8">
+    <div class="card-title">Explainability (Why we predicted this)</div>
+    <div class="muted">Signals: SYN spike • rapid unique-src growth • packet size burstiness</div>
+    {% if state.prediction.why %}
+      <p><strong>Why:</strong> {{ state.prediction.why }}</p>
+    {% else %}
+      <p><strong>RAG summary:</strong> Recent sequence matches known SYN-flood pre-cursor patterns.</p>
+    {% endif %}
+  </section>
+
+  <aside class="span-4">
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">Blocked IPs</div>
+        <div class="muted">auto</div>
+      </div>
+      <ul class="list">
+        {% if not state.blocked %}
+          <li class="muted">No blocked IPs yet — system idle</li>
+        {% else %}
+          {% for b in state.blocked %}
+            <li class="row">
+              <div>
+                <div class="strong">{{ b.ip }}</div>
+                <div class="muted">blocked at {{ b.time }}</div>
+              </div>
+              <form action="{{ url_for('unblock', index=loop.index0) }}" method="post">
+                <button class="btn btn-small">unblock</button>
+              </form>
+            </li>
+          {% endfor %}
+        {% endif %}
+      </ul>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">Phishing Alerts</div>
+        <div class="muted">LLM + heuristics</div>
+      </div>
+      <ul class="list">
+        {% if not state.phish %}
+          <li class="muted">No alerts</li>
+        {% else %}
+          {% for p in state.phish %}
+            <li class="row">
+              <div>
+                <div class="strong">{{ p.subj }}</div>
+                <div class="muted">from {{ p.from }} • {{ p.time }}</div>
+              </div>
+              <div class="badge {{ 'risk-high' if p.score>0.85 else 'risk-med' }}">{{ (p.score*100)|int }}%</div>
+              <form action="{{ url_for('ack_phish', index=loop.index0) }}" method="post">
+                <button class="btn btn-small btn-okay">Quarantine</button>
+              </form>
+            </li>
+          {% endfor %}
+        {% endif %}
+      </ul>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Demo Controls</div>
+      <form action="{{ url_for('trigger_prediction') }}" method="post"><button class="btn wide btn-warn">Trigger Prediction</button></form>
+      <form action="{{ url_for('force_block') }}" method="post"><button class="btn wide btn-danger">Force Auto-Block</button></form>
+      <form action="{{ url_for('add_phish') }}" method="post"><button class="btn wide btn-info">Add Phish Alert</button></form>
+
+      <form action="{{ url_for('start_replay') }}" method="post" style="margin-top:8px;">
+        <!-- change path value to the csv path on your machine -->
+        <input type="hidden" name="path" value="sample_replay.csv">
+        <input type="hidden" name="speed" value="5.0">
+        <button class="btn wide btn-info">Start Replay (CSV)</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Timeline</div>
+      <ul class="timeline">
+        <li>{{ state.now }} — Agent tick</li>
+        <li>{{ state.now }} — Cloak {{ 'enabled' if state.cloak_on else 'disabled' }}</li>
+        {% if state.blocked %}<li>{{ state.blocked[0].time }} — Auto-block applied</li>{% endif %}
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

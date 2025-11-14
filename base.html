@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AegisGuard — Flask Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">🛡️</div>
+        <div>
+          <div class="title">AegisGuard — Predict • Deflect • Disguise</div>
+          <div class="subtitle">Flask (no JS) demo dashboard</div>
+        </div>
+      </div>
+      <div class="agent">Edge Agent: <span class="badge">Online</span></div>
+    </header>
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="footer">AegisGuard • Flask UI for hackathon demos — server-rendered with Matplotlib charts.</footer>
+  </body>
+</html>
